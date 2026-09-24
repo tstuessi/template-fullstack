@@ -19,11 +19,14 @@ day it's created, not whatever was latest when the template was last
 edited.
 
 `frontend/` itself doesn't exist in this repo — `setup.sh` scaffolds it
-via `npm create vite@latest`, then copies `frontend-overlay/` on top
-(the scaffold tool writes its own placeholder `App.tsx` etc., and the
+via `create-vite`, then copies `frontend-overlay/` on top (the
+scaffold tool writes its own placeholder `App.tsx` etc., and the
 overlay replaces those with the hello-world source).
 
 ## First use, after creating a repo from this template
+
+`setup.sh` asks for a project name (used as `pyproject.toml`'s
+`[project].name`) and then runs non-interactively from there:
 
     ./setup.sh
     git add -A

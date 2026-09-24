@@ -10,16 +10,32 @@ for cmd in uv npm npx; do
     command -v "$cmd" >/dev/null || { echo "setup.sh: '$cmd' not found on PATH" >&2; exit 1; }
 done
 
+if [ -t 0 ]; then
+    read -r -p "Project name [fullstack-template]: " project_name
+else
+    project_name=""
+    echo "Non-interactive shell — using default project name 'fullstack-template'."
+fi
+project_name="${project_name:-fullstack-template}"
+
+echo "==> Setting project name to '${project_name}' in pyproject.toml"
+sed -i "s|^name = \".*\"|name = \"${project_name}\"|" pyproject.toml
+
 echo "==> Backend: resolving latest dependency versions with uv"
 uv add fastapi "uvicorn[standard]" sqlmodel alembic "psycopg[binary]" \
        pydantic-settings python-multipart
 uv add --dev pytest pytest-asyncio pytest-cov ruff mypy httpx respx pre-commit
 
-echo "==> Frontend: scaffolding with npm create vite@latest"
+echo "==> Frontend: scaffolding with create-vite"
 if [ -d frontend ]; then
     echo "    frontend/ already exists — skipping scaffold (delete it first to re-scaffold)"
 else
-    npm create vite@latest frontend -- --template react-ts
+    # `npx --yes` (not `npm create ... --`) so npm's "Need to install
+    # create-vite@x — Ok to proceed?" confirmation never blocks on stdin.
+    # `< /dev/null` is defense-in-depth: if anything downstream still
+    # tries to prompt, it fails fast on EOF instead of hanging and
+    # leaking whatever gets typed next into the next command.
+    npx --yes create-vite@latest frontend --template react-ts < /dev/null
 fi
 
 echo "==> Frontend: installing latest dependency versions"
