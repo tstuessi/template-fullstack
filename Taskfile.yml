@@ -1,0 +1,209 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+
+version: "3"
+
+dotenv: [".env"]
+
+tasks:
+  default:
+    desc: List available tasks
+    cmds:
+      - task --list
+
+  setup:
+    desc: One-time scaffold — resolves latest tool versions via uv/npm (see README.md)
+    cmds:
+      - ./setup.sh
+
+  install:
+    desc: Sync backend deps, install e2e (root) and frontend npm deps
+    cmds:
+      - uv sync
+      - npm install
+      - cd frontend && npm install
+
+  hooks:install:
+    desc: Install the pre-commit git hook
+    cmds:
+      - uv run pre-commit install
+
+  hooks:run:
+    desc: Run all pre-commit hooks against the whole repo
+    cmds:
+      - uv run pre-commit run --all-files
+
+  dev:
+    desc: Start dev environment (postgres + backend + frontend, hot-reload) via Docker Compose
+    cmds:
+      - docker compose -f docker-compose.dev.yml up --build
+
+  dev:detached:
+    desc: Start dev environment in the background
+    cmds:
+      - docker compose -f docker-compose.dev.yml up --build -d
+
+  dev:down:
+    desc: Stop the dev environment
+    cmds:
+      - docker compose -f docker-compose.dev.yml down
+
+  dev:db:
+    desc: >
+      Start just the dev Postgres container, detached — for bare-metal
+      `task run` / `task run:frontend` work without the rest of
+      `task dev`'s stack.
+    cmds:
+      - docker compose -f docker-compose.dev.yml up -d postgres
+
+  build:
+    desc: Build the frontend and copy it into the backend's static folder (prod)
+    cmds:
+      - cd frontend && npm run build
+      - rm -rf src/app/static
+      - mkdir -p src/app/static
+      - cp -r frontend/dist/* src/app/static/
+
+  prod:
+    desc: Build the frontend, then build and start the prod image via Docker Compose
+    deps: [build]
+    cmds:
+      - docker compose up --build -d
+
+  prod:down:
+    desc: Stop the prod stack
+    cmds:
+      - docker compose down
+
+  run:
+    desc: >
+      Run the backend dev server with autoreload, bare-metal (no Docker)
+      -- DATABASE_URL defaults to the Postgres docker-compose.dev.yml
+      starts (localhost:5432), override by exporting it yourself.
+    cmds:
+      - DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://postgres:postgres@localhost:5432/app_dev}" uv run uvicorn app.main:app --reload
+
+  run:frontend:
+    desc: Run the frontend dev server bare-metal (Vite, proxies /api to localhost:8000)
+    cmds:
+      - cd frontend && npm run dev
+
+  ladle:
+    desc: Serve the Ladle component viewer (frontend/src/**/*.stories.tsx) for isolated component dev
+    cmds:
+      - cd frontend && npm run ladle
+
+  ladle:build:
+    desc: Build the static Ladle component viewer to frontend/build
+    cmds:
+      - cd frontend && npm run ladle:build
+
+  openapi:
+    desc: Regenerate frontend/src/types/api.d.ts from the running backend's /openapi.json
+    cmds:
+      - cd frontend && npm run openapi
+
+  migrate:
+    desc: Run Alembic migrations (DATABASE_URL defaults to localhost:5432, see `run`)
+    cmds:
+      - DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://postgres:postgres@localhost:5432/app_dev}" uv run alembic upgrade head
+
+  db:ensure:
+    desc: Create the database named in DATABASE_URL if it doesn't exist (used by the test tasks)
+    cmds:
+      - uv run scripts/db_ensure.py
+
+  db:reset:
+    desc: 'Truncate all app tables in the dev DB (prompts for confirmation; pass -- --yes to skip)'
+    cmds:
+      - uv run scripts/db_reset.py {{.CLI_ARGS}}
+
+  test:
+    desc: >
+      Run backend tests. Defaults to its own app_test database, NOT the
+      dev one — export DATABASE_URL to override.
+    vars:
+      URL: '{{.DATABASE_URL | default "postgresql+psycopg://postgres:postgres@localhost:5432/app_test"}}'
+    cmds:
+      - DATABASE_URL="{{.URL}}" uv run scripts/db_ensure.py
+      - DATABASE_URL="{{.URL}}" uv run alembic upgrade head
+      - DATABASE_URL="{{.URL}}" uv run scripts/db_reset.py --yes
+      - DATABASE_URL="{{.URL}}" uv run pytest
+
+  test:frontend:
+    desc: Run frontend tests
+    cmds:
+      - cd frontend && npm run test:run
+
+  test:e2e:
+    desc: Run Playwright e2e specs (boots backend + frontend itself)
+    cmds:
+      - npx playwright test
+
+  lint:
+    desc: Lint backend with ruff
+    cmds:
+      - uv run ruff check .
+
+  lint:frontend:
+    desc: Lint frontend with biome
+    cmds:
+      - cd frontend && npm run lint
+
+  lint:fix:
+    desc: Lint backend with ruff, applying safe autofixes
+    cmds:
+      - uv run ruff check --fix .
+
+  lint:frontend:fix:
+    desc: Lint frontend with biome, applying safe autofixes
+    cmds:
+      - cd frontend && npm run lint:fix
+
+  fmt:
+    desc: Format backend with ruff
+    cmds:
+      - uv run ruff format .
+
+  fmt:frontend:
+    desc: Format frontend with biome
+    cmds:
+      - cd frontend && npm run fmt
+
+  fmt:check:
+    desc: Check backend formatting without changing files
+    cmds:
+      - uv run ruff format --check .
+
+  fmt:frontend:check:
+    desc: Check frontend formatting without changing files
+    cmds:
+      - cd frontend && npm run fmt:check
+
+  typecheck:
+    desc: Type-check backend with mypy
+    cmds:
+      - uv run mypy src
+
+  typecheck:frontend:
+    desc: Type-check frontend with tsc
+    cmds:
+      - cd frontend && npm run test:ts
+
+  check:
+    desc: Full pre-PR check suite — lint, format check, typecheck, tests, both sides + e2e
+    cmds:
+      - task: lint
+      - task: fmt:check
+      - task: typecheck
+      - task: test
+      - task: lint:frontend
+      - task: fmt:frontend:check
+      - task: typecheck:frontend
+      - task: test:frontend
+      - task: test:e2e
+
+  clean:
+    desc: Remove caches and build artifacts
+    cmds:
+      - rm -rf .pytest_cache .mypy_cache .ruff_cache htmlcov .coverage dist build
+      - rm -rf frontend/dist frontend/build frontend/coverage test-results playwright-report src/app/static

@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+
+# Env / secrets
+.env
+
+# Test / e2e artifacts
+test-results/
+playwright-report/
+
+# Backend prod static bundle (copied in by `task build`)
+src/app/static/
+
+.DS_Store

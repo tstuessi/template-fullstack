@@ -1,0 +1,150 @@
+# Mirrors this repo's own dev workflow via `task`. No Forgejo runners
+# are registered on this cluster yet (as of 2026-09-24), so this
+# workflow won't actually execute anywhere until one is — it's included
+# so CI is ready the moment a runner exists, not because it's been run
+# for real. Once a runner is registered, check the `runs-on:` label
+# below matches whatever label(s) it advertises.
+#
+# Action refs assume github.com actions are reachable from the runner
+# (Forgejo's default when actions.ENABLED is on). If your instance
+# restricts that, switch these to the code.forgejo.org/actions/*
+# mirrors instead.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/app_dev
+
+jobs:
+  python:
+    runs-on: docker
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_dev
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "latest"
+
+      - name: Install Task
+        uses: go-task/setup-task@v2
+
+      - name: Get Python version
+        run: echo "PYTHON_VERSION=$(cat .python-version)" >> "$GITHUB_ENV"
+
+      - name: Set up Python
+        run: uv python install "$PYTHON_VERSION"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run migrations
+        run: uv run alembic upgrade head
+
+      - name: Lint
+        run: task lint
+
+      - name: Format check
+        run: task fmt:check
+
+      - name: Type-check
+        run: task typecheck
+
+      - name: Test
+        run: uv run pytest
+
+  node:
+    runs-on: docker
+    defaults:
+      run:
+        working-directory: ./frontend
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run fmt:check
+
+      - name: Type-check
+        run: npm run test:ts
+
+      - name: Run tests
+        run: npm run test:run
+
+  migrations:
+    # Runs against a completely fresh Postgres, separate from the
+    # python job's, so a migration that only works on an
+    # already-migrated DB gets caught.
+    runs-on: docker
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app_dev
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          version: "latest"
+
+      - name: Get Python version
+        run: echo "PYTHON_VERSION=$(cat .python-version)" >> "$GITHUB_ENV"
+
+      - name: Set up Python
+        run: uv python install "$PYTHON_VERSION"
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: alembic upgrade head (fresh database)
+        run: uv run alembic upgrade head
+
+      - name: alembic downgrade base then upgrade head (round trip)
+        run: |
+          uv run alembic downgrade base
+          uv run alembic upgrade head

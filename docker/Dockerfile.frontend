@@ -1,0 +1,9 @@
+# syntax=docker/dockerfile:1
+FROM node:24-slim
+
+WORKDIR /app
+
+# Source + node_modules are bind-mounted by docker-compose.dev.yml
+# (node_modules as its own anonymous volume, so the host's copy is
+# never shadowed into the container or vice versa). `npm install` runs
+# in the compose service's `command:` on every container start.

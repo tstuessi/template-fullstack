@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+FROM python:3.13-slim-bookworm
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# Source is bind-mounted in by docker-compose.dev.yml (see that file's
+# `volumes:` for the backend service) — this image just needs uv + deps
+# available; the actual `uv sync` + `uvicorn --reload` happens in the
+# compose service's `command:` on every container start (fast, cached).

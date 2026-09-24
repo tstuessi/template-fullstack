@@ -1,0 +1,44 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: check-toml
+
+  # Local hooks shell out to whatever versions uv.lock / package-lock.json
+  # already resolved, instead of pre-commit's own pinned `rev:` — so there's
+  # only one place (setup.sh + the lockfiles) where these versions live,
+  # not two that can drift apart.
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (backend)
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: ruff-format
+        name: ruff format (backend)
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: mypy
+        name: mypy (backend)
+        entry: uv run mypy src
+        language: system
+        types: [python]
+        pass_filenames: false
+
+      - id: biome
+        name: biome check (frontend)
+        entry: bash -c 'cd frontend && npm run lint:fix'
+        language: system
+        files: ^frontend/
+        pass_filenames: false
