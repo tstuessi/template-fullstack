@@ -25,9 +25,7 @@ def main() -> None:
     maintenance_dsn, dbname = _parse(url)
 
     with psycopg.connect(maintenance_dsn, autocommit=True) as conn:
-        exists = conn.execute(
-            "SELECT 1 FROM pg_database WHERE datname = %s", (dbname,)
-        ).fetchone()
+        exists = conn.execute("SELECT 1 FROM pg_database WHERE datname = %s", (dbname,)).fetchone()
         if exists:
             print(f"Database {dbname!r} already exists.")
             return

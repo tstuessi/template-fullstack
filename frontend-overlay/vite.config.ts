@@ -1,5 +1,7 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+// vitest/config re-exports vite's defineConfig merged with the `test`
+// option's types — importing from plain "vite" leaves `test` untyped.
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [react()],

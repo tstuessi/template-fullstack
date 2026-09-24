@@ -40,11 +40,16 @@ fi
 
 echo "==> Frontend: applying hello-world overlay (replaces vite's scaffold source)"
 # Applied before `npm install` below, not after — the overlay's
-# .npmrc (legacy-peer-deps=true) has to be in place before any npm
-# install runs in frontend/, or a peer-dependency mismatch between
-# two independently-"latest" packages fails the install outright.
+# .npmrc (force=true) has to be in place before any npm install runs
+# in frontend/, or a peer-dependency mismatch between two
+# independently-"latest" packages fails the install outright.
 cp -r frontend-overlay/. frontend/
-rm -f frontend/src/App.css frontend/src/assets/react.svg frontend/public/vite.svg 2>/dev/null || true
+# Leftover create-vite scaffold source that isn't referenced by the
+# overlay above. Not the default asset files in src/assets/ or
+# public/ (e.g. favicon.svg) — those change name across create-vite
+# versions and index.html/nothing here depends on chasing them by
+# name; biome.json excludes public/ from lint instead.
+rm -f frontend/src/App.css
 
 echo "==> Frontend: installing latest dependency versions"
 (
@@ -73,6 +78,12 @@ echo "==> Frontend: installing latest dependency versions"
     npm pkg set "scripts.fmt:check"="biome format ."
     npm pkg set scripts.ladle="ladle serve"
     npm pkg set "scripts.ladle:build"="ladle build"
+
+    # `npm pkg set` above rewrites package.json with its own (tab)
+    # formatting, which fails `task lint:frontend` the moment it's run
+    # -- normalize everything to biome's own formatting now so the repo
+    # starts clean instead of failing its own first lint check.
+    npm run fmt
 )
 
 echo "==> E2E: installing latest Playwright"

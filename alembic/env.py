@@ -1,14 +1,14 @@
 from logging.config import fileConfig
 
-from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
+from alembic import context
 from app.settings import get_settings
 
 # Import model modules here so their tables register on SQLModel.metadata
 # before autogenerate runs. Empty for now — this template ships no models.
-# from app import models  # noqa: F401
+# from app import models
 
 config = context.config
 

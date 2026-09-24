@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from sqlmodel import SQLModel
 
 # Import model modules here so their tables register on SQLModel.metadata.
-# from app import models  # noqa: F401
+# from app import models
 
 
 def main() -> None:
@@ -33,7 +33,7 @@ def main() -> None:
 
     engine = create_engine(url)
     with engine.begin() as conn:
-        conn.execute(text(f'TRUNCATE TABLE {", ".join(tables)} RESTART IDENTITY CASCADE'))
+        conn.execute(text(f"TRUNCATE TABLE {', '.join(tables)} RESTART IDENTITY CASCADE"))
     print(f"Truncated {len(tables)} table(s).")
 
 
