@@ -38,6 +38,14 @@ else
     npx --yes create-vite@latest frontend --template react-ts < /dev/null
 fi
 
+echo "==> Frontend: applying hello-world overlay (replaces vite's scaffold source)"
+# Applied before `npm install` below, not after — the overlay's
+# .npmrc (legacy-peer-deps=true) has to be in place before any npm
+# install runs in frontend/, or a peer-dependency mismatch between
+# two independently-"latest" packages fails the install outright.
+cp -r frontend-overlay/. frontend/
+rm -f frontend/src/App.css frontend/src/assets/react.svg frontend/public/vite.svg 2>/dev/null || true
+
 echo "==> Frontend: installing latest dependency versions"
 (
     cd frontend
@@ -66,10 +74,6 @@ echo "==> Frontend: installing latest dependency versions"
     npm pkg set scripts.ladle="ladle serve"
     npm pkg set "scripts.ladle:build"="ladle build"
 )
-
-echo "==> Frontend: applying hello-world overlay (replaces vite's scaffold source)"
-cp -r frontend-overlay/. frontend/
-rm -f frontend/src/App.css frontend/src/assets/react.svg frontend/public/vite.svg 2>/dev/null || true
 
 echo "==> E2E: installing latest Playwright"
 npm install -D @playwright/test@latest
