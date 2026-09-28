@@ -21,6 +21,17 @@ project_name="${project_name:-fullstack-template}"
 echo "==> Setting project name to '${project_name}' in pyproject.toml"
 sed -i "s|^name = \".*\"|name = \"${project_name}\"|" pyproject.toml
 
+echo "==> Setting project name to '${project_name}' in k8s"
+sed -i "s|fullstack-template|${project_name}|" k8s/deployment.yaml
+
+echo "==> Setting project name to '${project_name}' in docker compose"
+sed -i "s|fullstack-template|${project_name}|" docker-compose.dev.yml
+sed -i "s|fullstack-template|${project_name}|" docker-compose.yml
+
+
+echo "==> Setting project name to '${project_name}' in taskfile"
+sed -i "s|fullstack-template|${project_name}|" Taskfile.yml
+
 echo "==> Backend: resolving latest dependency versions with uv"
 uv add fastapi "uvicorn[standard]" sqlmodel alembic "psycopg[binary]" \
        pydantic-settings python-multipart
@@ -98,7 +109,7 @@ cat <<'EOF'
 Setup complete.
 
 Review what changed (uv.lock, frontend/package-lock.json,
-package-lock.json, and the generated frontend/ tree), then commit it:
+package-lock.json, k8s deployment, and the generated frontend/ tree), then commit it:
 
     git add -A
     git commit -m "Run setup.sh: resolve dependency versions"

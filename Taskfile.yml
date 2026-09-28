@@ -4,6 +4,11 @@ version: "3"
 
 dotenv: [".env"]
 
+vars:
+  DOCKER_REGISTRY: docker.tstuessi.com
+  IMAGE_NAME: fullstack-template
+  IMAGE_VERSION: latest
+
 tasks:
   default:
     desc: List available tasks
@@ -55,7 +60,7 @@ tasks:
     cmds:
       - docker compose -f docker-compose.dev.yml up -d postgres
 
-  build:
+  build:frontend:
     desc: Build the frontend and copy it into the backend's static folder (prod)
     cmds:
       - cd frontend && npm run build
@@ -65,7 +70,7 @@ tasks:
 
   prod:
     desc: Build the frontend, then build and start the prod image via Docker Compose
-    deps: [build]
+    deps: [build:frontend]
     cmds:
       - docker compose up --build -d
 
@@ -74,6 +79,18 @@ tasks:
     cmds:
       - docker compose down
 
+  build:
+    desc: Build the production container for push (used in CI)
+    deps: [build:frontend]
+    cmds:
+      - docker build -t {{ .IMAGE_NAME }} .
+  
+  push:
+    desc: Push the production container to the local registry
+    cmds:
+      - docker tag {{ .IMAGE_NAME }} {{ .DOCKER_REGISTRY }}/{{ .IMAGE_NAME }}:{{ .IMAGE_VERSION }}
+      - docker push {{ .DOCKER_REGISTRY }}/{{ .IMAGE_NAME }}:{{ .IMAGE_VERSION }}
+      
   run:
     desc: >
       Run the backend dev server with autoreload, bare-metal (no Docker)

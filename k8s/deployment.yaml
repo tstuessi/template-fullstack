@@ -1,0 +1,25 @@
+kubernetes apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fullstack-template
+spec:
+  selector:
+    matchLabels:
+      app: fullstack-template
+  template:
+    metadata:
+      labels:
+        app: fullstack-template
+    spec:
+      containers:
+      - name: fullstack-template
+        image: docker.tstuessi.com/fullstack-template:latest
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "500m"
+          limits:
+            memory: "128Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8000
