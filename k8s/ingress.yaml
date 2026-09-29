@@ -1,0 +1,14 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: fullstack-template-ingress
+  namespace: default
+spec:
+  entryPoints:
+    - web
+  routes:
+    - kind: Rule
+      match: Host(`fullstack-template.k8s.tstuessi.com`)
+      services:
+        - name: fullstack-template-svc
+          port: web
