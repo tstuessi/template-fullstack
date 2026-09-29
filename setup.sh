@@ -23,6 +23,8 @@ sed -i "s|^name = \".*\"|name = \"${project_name}\"|" pyproject.toml
 
 echo "==> Setting project name to '${project_name}' in k8s"
 sed -i "s|fullstack-template|${project_name}|" k8s/deployment.yaml
+sed -i "s|fullstack-template|${project_name}|" k8s/db.yaml
+
 
 echo "==> Setting project name to '${project_name}' in docker compose"
 sed -i "s|fullstack-template|${project_name}|" docker-compose.dev.yml

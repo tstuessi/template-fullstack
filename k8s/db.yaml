@@ -1,0 +1,20 @@
+apiVersion: db.movetokube.com/v1alpha1
+kind: Postgres
+metadata:
+  name: fullstack-template-db
+  namespace: default
+spec:
+  database: fullstack-template-db
+  dropOnDelete: False
+---
+apiVersion: db.movetokube.com/v1alpha1
+kind: PostgresUser
+metadata:
+  name: fullstack-template-db-user
+  namespace: default
+spec:
+  role: fullstack-template-db-user
+  database: fullstack-template-db
+  secretName: pg-creds
+  secretTemplate:
+    database_url: "postgresql+psycopg://{{ .Role }}:{{ .Password }}@{{ .Host }}/{{ .Database }}"

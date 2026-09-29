@@ -14,6 +14,12 @@ spec:
       containers:
       - name: fullstack-template
         image: docker.tstuessi.com/fullstack-template:latest
+        env:
+          - name: database_url
+            valueFrom:
+              secretKeyRef:
+                name: pg-creds-fullstack-template-db-user
+                key: database_url
         resources:
           requests:
             memory: "128Mi"
