@@ -1,4 +1,7 @@
-"""Create the database named in DATABASE_URL if it doesn't already exist."""
+"""Create the database named in DATABASE_URL if it doesn't already exist.
+
+Pass --recreate to drop it first, for a guaranteed-empty database.
+"""
 
 import os
 import re
@@ -23,8 +26,12 @@ def main() -> None:
         "postgresql+psycopg://postgres:postgres@localhost:5432/app_dev",
     )
     maintenance_dsn, dbname = _parse(url)
+    recreate = "--recreate" in sys.argv[1:]
 
     with psycopg.connect(maintenance_dsn, autocommit=True) as conn:
+        if recreate:
+            conn.execute(sql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(sql.Identifier(dbname)))
+            print(f"Dropped database {dbname!r}.")
         exists = conn.execute("SELECT 1 FROM pg_database WHERE datname = %s", (dbname,)).fetchone()
         if exists:
             print(f"Database {dbname!r} already exists.")

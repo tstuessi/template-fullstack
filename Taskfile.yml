@@ -84,13 +84,13 @@ tasks:
     deps: [build:frontend]
     cmds:
       - docker build -t {{ .IMAGE_NAME }} .
-  
+
   push:
     desc: Push the production container to the local registry
     cmds:
       - docker tag {{ .IMAGE_NAME }} {{ .DOCKER_REGISTRY }}/{{ .IMAGE_NAME }}:{{ .IMAGE_VERSION }}
       - docker push {{ .DOCKER_REGISTRY }}/{{ .IMAGE_NAME }}:{{ .IMAGE_VERSION }}
-      
+
   run:
     desc: >
       Run the backend dev server with autoreload, bare-metal (no Docker)
@@ -124,13 +124,28 @@ tasks:
     cmds:
       - DATABASE_URL="${DATABASE_URL:-postgresql+psycopg://postgres:postgres@localhost:5432/app_dev}" uv run alembic upgrade head
 
+  migrate:new:
+    desc: >
+      Autogenerate a new Alembic revision against a throwaway app_migrations
+      DB, recreated and upgraded to head first so the diff is only your
+      model changes. Usage: task migrate:new -- "add card table"
+    vars:
+      URL: postgresql+psycopg://postgres:postgres@localhost:5432/app_migrations
+    preconditions:
+      - sh: '[ -n "{{.CLI_ARGS}}" ]'
+        msg: 'Pass a revision message: task migrate:new -- "add card table"'
+    cmds:
+      - DATABASE_URL="{{.URL}}" uv run scripts/db_ensure.py --recreate
+      - DATABASE_URL="{{.URL}}" uv run alembic upgrade head
+      - DATABASE_URL="{{.URL}}" uv run alembic revision --autogenerate -m "{{.CLI_ARGS}}"
+
   db:ensure:
     desc: Create the database named in DATABASE_URL if it doesn't exist (used by the test tasks)
     cmds:
       - uv run scripts/db_ensure.py
 
   db:reset:
-    desc: 'Truncate all app tables in the dev DB (prompts for confirmation; pass -- --yes to skip)'
+    desc: "Truncate all app tables in the dev DB (prompts for confirmation; pass -- --yes to skip)"
     cmds:
       - uv run scripts/db_reset.py {{.CLI_ARGS}}
 
